@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Efecto Matrix Infinito</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            overflow: hidden;
+            touch-action: none;
+            font-family: 'Courier New', monospace;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        .matrix-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+        
+        .matrix-column {
+            position: absolute;
+            top: 0;
+            width: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #0f0;
+            text-shadow: 0 0 5px #0f0, 0 0 10px #0f0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .matrix-char {
+            opacity: 0;
+            animation: fadeIn 0.1s forwards, fadeOut 1s forwards;
+            animation-delay: calc(var(--delay) * 0.1s), calc(var(--delay) * 0.1s + 0.5s);
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+            }
+        }
+        
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+        
+        .glow-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0, 255, 0, 0.1) 100%);
+            mix-blend-mode: screen;
+        }
+        
+        .loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #0f0;
+            font-size: 24px;
+            z-index: 1000;
+        }
+        
+        /* Responsive para diferentes tamaños de pantalla */
+        @media (max-width: 480px) {
+            .matrix-column {
+                width: 16px;
+                font-size: 16px;
+            }
+        }
+        
+        @media (max-width: 320px) {
+            .matrix-column {
+                width: 14px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        CARGANDO MATRIX...
+    </div>
+    
+    <div class="matrix-container" id="matrixContainer">
+        <div class="glow-effect"></div>
+    </div>
+
+    <script>
+        class InfiniteMatrixEffect {
+            constructor() {
+                this.container = document.getElementById('matrixContainer');
+                this.loadingScreen = document.getElementById('loadingScreen');
+                this.columns = [];
+                this.characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                this.columnCount = 0;
+                this.columnIntervals = [];
+                this.glitchInterval = null;
+                this.isRunning = false;
+                
+                this.init();
+            }
+            
+            async init() {
+                // Mostrar pantalla de carga
+                this.showLoading();
+                
+                // Esperar a que el DOM esté completamente cargado
+                await this.waitForDOMReady();
+                
+                // Calcular número de columnas
+                this.calculateColumnCount();
+                
+                // Crear columnas
+                this.createColumns();
+                
+                // Ocultar pantalla de carga y comenzar efecto
+                this.hideLoading();
+                this.startEffect();
+                
+                // Configurar event listeners
+                this.setupEventListeners();
+            }
+            
+            showLoading() {
+                this.loadingScreen.style.display = 'flex';
+            }
+            
+            hideLoading() {
+                this.loadingScreen.style.display = 'none';
+            }
+            
+            async waitForDOMReady() {
+                return new Promise(resolve => {
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', resolve);
+                    } else {
+                        resolve();
+                    }
+                });
+            }
+            
+            calculateColumnCount() {
+                const screenWidth = window.innerWidth;
+                this.columnCount = Math.floor(screenWidth / 20);
+            }
+            
+            createColumns() {
+                this.container.innerHTML = '<div class="glow-effect"></div>';
+                this.columns = [];
+                this.columnIntervals = [];
+                
+                for (let i = 0; i < this.columnCount; i++) {
+                    const column = document.createElement('div');
+                    column.className = 'matrix-column';
+                    column.style.left = (i * 20) + 'px';
+                    column.style.animationDelay = (Math.random() * 2) + 's';
+                    
+                    this.container.appendChild(column);
+                    this.columns.push(column);
+                }
+            }
+            
+            startEffect() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+                
+                // Iniciar lluvia en todas las columnas
+                this.startAllColumnsRain();
+                
+                // Efecto de glitch aleatorio
+                this.startGlitchEffect();
+                
+                // Efecto de intensidad variable
+                this.startIntensityEffect();
+            }
+            
+            startAllColumnsRain() {
+                // Limpiar intervalos anteriores
+                this.columnIntervals.forEach(interval => clearInterval(interval));
+                this.columnIntervals = [];
+                
+                // Crear nuevos intervalos para cada columna
+                this.columns.forEach((column, index) => {
+                    const interval = setInterval(() => {
+                        this.addCharacterToColumn(index);
+                    }, Math.random() * 150 + 50); // Intervalo aleatorio entre 50-200ms
+                    
+                    this.columnIntervals.push(interval);
+                    
+                    // Añadir caracteres iniciales
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            this.addCharacterToColumn(index);
+                        }, i * 200);
+                    }
+                });
+            }
+            
+            addCharacterToColumn(columnIndex) {
+                const column = this.columns[columnIndex];
+                const char = this.getRandomChar();
+                
+                const charElement = document.createElement('div');
+                charElement.className = 'matrix-char';
+                charElement.textContent = char;
+                
+                // Configurar animaciones y estilos
+                const fallDuration = Math.random() * 3 + 2; // 2-5 segundos
+                const startDelay = Math.random() * 1;
+                
+                charElement.style.animation = `
+                    fall ${fallDuration}s linear forwards,
+                    fadeIn 0.1s forwards,
+                    fadeOut 1s forwards
+                `;
+                charElement.style.animationDelay = `
+                    ${startDelay}s,
+                    ${startDelay}s,
+                    ${startDelay + fallDuration - 1}s
+                `;
+                
+                // Variación visual aleatoria
+                charElement.style.opacity = Math.random() * 0.8 + 0.2;
+                charElement.style.color = `hsl(120, 100%, ${Math.random() * 40 + 40}%)`;
+                
+                column.appendChild(charElement);
+                
+                // Limpieza automática después de que termine la animación
+                setTimeout(() => {
+                    if (charElement.parentNode === column) {
+                        column.removeChild(charElement);
+                    }
+                }, (fallDuration + 1) * 1000);
+            }
+            
+            getRandomChar() {
+                return this.characters[Math.floor(Math.random() * this.characters.length)];
+            }
+            
+            startGlitchEffect() {
+                this.glitchInterval = setInterval(() => {
+                    // Aplicar glitch aleatorio a algunas columnas
+                    this.columns.forEach((column, index) => {
+                        if (Math.random() < 0.08) { // 8% de probabilidad de glitch por columna
+                            this.applyColumnGlitch(index);
+                        }
+                    });
+                }, 1500);
+            }
+            
+            applyColumnGlitch(columnIndex) {
+                const column = this.columns[columnIndex];
+                const chars = column.querySelectorAll('.matrix-char');
+                
+                chars.forEach(char => {
+                    if (Math.random() < 0.4) {
+                        // Efecto glitch temporal
+                        const originalColor = char.style.color;
+                        char.style.color = '#f00';
+                        
+                        setTimeout(() => {
+                            char.style.color = originalColor;
+                        }, Math.random() * 200 + 100);
+                    }
+                });
+            }
+            
+            startIntensityEffect() {
+                setInterval(() => {
+                    // Variar la intensidad del efecto periódicamente
+                    const intensity = Math.random() * 0.3 + 0.7;
+                    this.columns.forEach(column => {
+                        column.style.opacity = intensity;
+                    });
+                }, 3000);
+            }
+            
+            setupEventListeners() {
+                // Ajustar columnas en resize
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(() => {
+                        this.calculateColumnCount();
+                        this.adjustColumns();
+                    }, 250);
+                });
+                
+                // Prevenir zoom y scroll en dispositivos móviles
+                document.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                document.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                // Reiniciar efecto al hacer clic/tap
+                this.container.addEventListener('click', () => {
+                    this.restartEffect();
+                });
+                
+                // Pausar/reanudar con doble tap
+                let lastTap = 0;
+                this.container.addEventListener('touchend', (e) => {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTap;
+                    
+                    if (tapLength < 300 && tapLength > 0) {
+                        this.toggleEffect();
+                    }
+                    
+                    lastTap = currentTime;
+                });
+            }
+            
+            adjustColumns() {
+                const newColumnCount = Math.floor(window.innerWidth / 20);
+                
+                if (newColumnCount !== this.columnCount) {
+                    this.columnCount = newColumnCount;
+                    this.createColumns();
+                    this.startAllColumnsRain();
+                }
+            }
+            
+            restartEffect() {
+                this.stopEffect();
+                setTimeout(() => {
+                    this.startEffect();
+                }, 100);
+            }
+            
+            stopEffect() {
+                this.isRunning = false;
+                
+                // Detener todos los intervalos
+                this.columnIntervals.forEach(interval => clearInterval(interval));
+                this.columnIntervals = [];
+                
+                if (this.glitchInterval) {
+                    clearInterval(this.glitchInterval);
+                    this.glitchInterval = null;
+                }
+                
+                // Limpiar todos los caracteres
+                this.columns.forEach(column => {
+                    column.innerHTML = '';
+                });
+            }
+            
+            toggleEffect() {
+                if (this.isRunning) {
+                    this.stopEffect();
+                } else {
+                    this.startEffect();
+                }
+            }
+        }
+        
+        // Iniciar el efecto cuando todo esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            window.matrixEffect = new InfiniteMatrixEffect();
+        });
+    </script>
+</body>
+</html>
+
